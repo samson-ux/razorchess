@@ -55,7 +55,7 @@ export class AdaptiveEngine {
     gameState: GameState,
     profile: PlayerProfile
   ): Promise<{ move: string; san: string; evaluation: number; thinking: string }> {
-    const posEval = await this.engine.evaluate(fen, 16, 8);
+    const posEval = await this.engine.evaluate(fen, 4, 8);
     const topMoves = posEval.bestMoves;
 
     if (topMoves.length === 0) {

@@ -113,7 +113,6 @@ export function useChessGame() {
     const thinkTime = Date.now() - moveStartTime.current;
 
     try {
-      const fenBefore = chess.fen();
       const result = chess.move({ from: from as Square, to: to as Square, promotion });
       if (!result) return false;
 
@@ -138,15 +137,11 @@ export function useChessGame() {
         isPlayerMove: true,
       };
 
+      // Skip deep analysis during play — it called evaluate() twice and
+      // added latency.  We defer full analysis to post-game instead.
+      // Just update adaptive engine's rolling accuracy with a rough estimate.
       if (adaptiveRef.current) {
-        try {
-          const analysis = await adaptiveRef.current.analyzePlayerMove(
-            fenBefore, fenAfter, gameMove.uci, result.san, moveNum, thinkTime
-          );
-          Object.assign(gameMove, analysis);
-        } catch (e) {
-          console.error('Move analysis failed:', e);
-        }
+        adaptiveRef.current.updatePlayerAccuracy(gameMove);
       }
 
       const newMoves = [...(gameState.moves || []), gameMove];
@@ -191,6 +186,9 @@ export function useChessGame() {
     }
 
     setIsThinking(true);
+
+    // Yield to the event loop so React can paint the "Thinking…" indicator
+    await new Promise(r => setTimeout(r, 0));
 
     try {
       const result = await adaptiveRef.current.selectMove(
